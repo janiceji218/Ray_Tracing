@@ -105,7 +105,6 @@ def read_obj_triangles(f):
     (i, p, n, t) = read_obj(f)
     return p[i,:]
 
-
 def batch_intersect(vs, ray, eps=1e-10):
     """Compute intersections between one ray and a batch of triangles.
 
@@ -120,9 +119,34 @@ def batch_intersect(vs, ray, eps=1e-10):
     Misses are reported with t = infinity, beta = gamma = 0, and i = -1
     """
 
-    # Implementation omitted until after A4 deadline ...
+    # Form array of matrix equations
+    A = np.zeros((vs.shape[0], 3, 3), np.float64)
+    A[:,:,0] = vs[:,0] - vs[:,1]
+    A[:,:,1] = vs[:,0] - vs[:,2]
+    A[:,:,2] = [ray.direction]
+    b = vs[:,0] - ray.origin
 
-    return np.inf, 0, 0, -1
+    # Remove any singular equations
+    non_sing = np.abs(np.linalg.det(A)) > eps
+    A = A[non_sing]
+    b = b[non_sing]
 
+    betas, gammas, ts = np.linalg.solve(A, b).transpose()
 
+    # Filter for hits that are inside triangles and in the ray's t range
+    hits = np.logical_and(
+        np.logical_and(np.logical_and(betas >= -eps, gammas >= -eps), betas + gammas < 1+eps),
+        np.logical_and(ts >= ray.start, ts <= ray.end)
+    )
+    t_hit = ts[hits]
 
+    if len(t_hit) > 0:
+        i_hit = np.argmin(t_hit)
+        # Remember to map the index back to the original array
+        i = np.arange(vs.shape[0])[non_sing][hits][i_hit]
+        t = t_hit[i_hit]
+        beta = betas[hits][i_hit]
+        gamma = gammas[hits][i_hit]
+        return t, beta, gamma, i
+    else:
+        return np.inf, 0, 0, -1
