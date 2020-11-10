@@ -104,8 +104,36 @@ class Sphere:
         # TODO A5 (Step1) implement this function
         # Copy your implementation from A4
         # Then calculate uv coordinates, to be passed into the Hit initializer
+        D = ray.direction
+        E = ray.origin
+        C = self.center
+        R = self.radius
+        B = 2*np.dot(D, E-C)
+        A = np.dot(D, D)
+        min_t = ray.start
+        max_t = ray.end
 
-        return no_hit
+        discriminant = B ** 2 - 4 * A * (np.dot(E-C, E-C)-R**2)
+
+        if discriminant < 0:
+            return no_hit
+
+        t0 = (-1*B - np.sqrt(discriminant)) / (2*A)
+        t1 = (-1*B + np.sqrt(discriminant)) / (2*A)
+
+        if (t0 >= min_t and t0 <= max_t and t0 <= t1):
+            t = t0
+        elif (t1 >= min_t and t1 <= max_t):
+            t = t1
+        else:
+            return no_hit
+
+        P = E + t * D
+        unit_normal = (P - C) / R
+        normal = normalize(P - C)
+        u = np.arctan2(normal[0], normal[2]) / (2 * np.pi) + 0.5
+        v = normal[1] * 0.5 + 0.5
+        return Hit(t, P, unit_normal, vec([u,v]), self.material)
 
 
 class Triangle:
@@ -131,8 +159,69 @@ class Triangle:
         # TODO A5 (Step1) implement this function
         # Copy your implementation from A4
         # Then calculate uv coordinates, to be passed into the Hit initializer
+        vs = self.vs
 
-        return no_hit
+        a = vs[0][0] - vs[1][0]
+        b = vs[0][1] - vs[1][1]
+        c = vs[0][2] - vs[1][2]
+        d = vs[0][0] - vs[2][0]
+        e = vs[0][1] - vs[2][1]
+        f = vs[0][2] - vs[2][2]
+
+        ray_dir = ray.direction
+        ray_orig = ray.origin
+
+        g = ray_dir[0]
+        h = ray_dir[1]
+        i = ray_dir[2]
+        j = vs[0][0] - ray_orig[0]
+        k = vs[0][1] - ray_orig[1]
+        l = vs[0][2] - ray_orig[2]
+
+        M = a * (e * i - h * f) + b * (g * f - d * i) + c * (d * h - e * g)
+
+        t = -(f * (a * k - j * b) + e * (j * c - a * l) + d *
+              (b * l - k * c)) / M
+
+        if (t < ray.start or t > ray.end):
+            return no_hit
+
+        gamma = (i * (a * k - j * b) + h * (j * c - a * l) + g *
+                 (b * l - k * c)) / M
+
+        if (gamma < 0 or gamma > 1):
+            return no_hit
+
+        beta = (j * (e * i - h * f) + k * (g * f - d * i) +
+                l * (d * h - e * g)) / M
+
+        if (beta < 0 or beta > 1 - gamma):
+            return no_hit
+
+        P = ray_orig + t * ray_dir
+
+        unit_normal = normalize(np.cross(vs[0] - vs[2], vs[1] - vs[2]))
+
+        dA = np.linalg.norm(vs[0] - P)
+        dB = np.linalg.norm(vs[1] - P)
+        dC = np.linalg.norm(vs[2] - vs[1])
+        sum = dA + dB + dC
+        coefA = dA / sum
+        coefB = dB / sum
+        coefC = dC / sum
+        pA = vs[0]
+        pB = vs[1]
+        pC = vs[2]
+        #(𝐵𝑦−𝐶𝑦)(𝑃𝑥−𝐶𝑥)+(𝐶𝑥−𝐵𝑥)(𝑃𝑦−𝐶𝑦) / (𝐵𝑦−𝐶𝑦)(𝐴𝑥−𝐶𝑥)+(𝐶𝑥−𝐵𝑥)(𝐴𝑦−𝐶𝑦)
+        #baryA = ((pB[1] - pC[1])*(P[0] - pC[0]) + (pC[0] - pB[0])*(P[1] - pC[1])) / ((pB[1] - pC[1])*(pA[0] - pC[0])+(pC[0] - pB[0])*(pA[1] - pC[1]))
+        #
+        #baryB =
+
+        u = coefA * (vs[0][0] / vs[0][2]) + coefB * (vs[1][0] / vs[1][2]) + coefC * (vs[2][0] / vs[2][2])
+        v = coefA * (vs[0][1] / vs[0][2]) + coefB * (vs[1][1] / vs[1][2]) + coefC * (vs[2][1] / vs[2][2])
+
+        return Hit(t, P, unit_normal, vec([u, v]), self.material)
+
 
 
 class Mesh:
@@ -176,6 +265,11 @@ class Camera:
         self.eye = eye
         self.aspect = aspect
         # TODO A5 copy implementation from A4
+        self.target = target
+        self.vfov = np.radians(vfov)
+        self.w = normalize(eye - target)
+        self.u = normalize(np.cross(up, self.w))
+        self.v = np.cross(self.w, self.u)
 
     def generate_ray(self, img_point):
         """Compute the ray corresponding to a point in the image.
@@ -186,8 +280,20 @@ class Camera:
         Return:
           Ray -- The ray corresponding to that image location (not necessarily normalized)
         """
-        # TODO A5 copy your implementation from A4 
-        return Ray(vec([0,0,0]), vec([1,0,0]))
+        # TODO A5 copy your implementation from A4
+        i = img_point[0]
+        j = img_point[1]
+        dist_vector = self.target - self.eye
+        proj_dist = np.linalg.norm(dist_vector)
+        height = 2 * proj_dist * np.tan(self.vfov / 2.0)
+        width = self.aspect * height
+        left = (-1) * width / 2.0
+        bottom = (-1) * height / 2.0
+        u = i * width + left
+        v = j * height + bottom
+        ray_origin = self.eye
+        ray_direction = ((-1) * proj_dist * self.w) + u * self.u + v * self.v
+        return Ray(ray_origin, ray_direction)
 
 
 class PointLight:
@@ -214,7 +320,35 @@ class PointLight:
         """
         # TODO A5 copy implementation from A4 and modify
         # material parameters need to be looked up by the uv's at the intersection point
-        return vec([0,0,0])
+        l = self.position - hit.point
+        epsilon = 0.000001
+        point = hit.point + l*epsilon
+        shadow_ray = Ray(point, l, epsilon, 1)
+
+        if (scene.intersect(shadow_ray).t > 1):
+
+            # diffuse shading
+            intensity = self.intensity
+            position = self.position
+            normal = hit.normal
+            dist_to_source = np.linalg.norm(hit.point - position)
+            diffuse_coeff = hit.material.k_d
+            v = (-1) * normalize(ray.direction)
+            light_ray = normalize(position - hit.point)
+            specular_coeff = hit.material.k_s
+            p = hit.material.p
+
+            # diffuse shading
+            # diffuse_output = diffuse_coeff * (np.maximum(0, np.dot(normal, light_ray)) / (dist_to_source ** 2)) * intensity
+            # specular shading
+            shade_ray = Ray(hit.point, light_ray, epsilon)
+            if (scene.intersect(shade_ray).t == np.inf):
+                h = (v + light_ray) / np.linalg.norm(v + light_ray)
+                specular_output = (diffuse_coeff + specular_coeff * ((np.dot(normal, h)) ** p)) * (
+                    np.maximum(0, np.dot(normal, light_ray)) / (dist_to_source ** 2)) * intensity
+                return specular_output
+
+        return vec([0, 0, 0])
 
 
 class AmbientLight:
@@ -239,7 +373,10 @@ class AmbientLight:
         """
         # TODO A5 copy implementation from A4 and modify
         # k_a needs to be looked up by the uv's at the intersection point
-        return vec([0,0,0])
+        intensity = self.intensity
+        diffuse_coeff = hit.material.k_a
+        output = diffuse_coeff * intensity
+        return output
 
 
 class Scene:
@@ -262,8 +399,19 @@ class Scene:
         Return:
           Hit -- the hit data
         """
-        # TODO A5 copy your implementation from A4 
-        return no_hit
+        # TODO A5 copy your implementation from A4
+        surfaces = self.surfs
+
+        min_t = np.inf
+        i = no_hit
+
+        for s in surfaces:
+            intersect = s.intersect(ray)
+            if (intersect.t < min_t):
+                min_t = intersect.t
+                i = intersect
+        return i
+
 
 
 MAX_DEPTH = 4
@@ -284,7 +432,32 @@ def shade(ray, hit, scene, lights, depth=0):
     """
     # TODO A5 copy implementation from A4 and modify
     # k_m needs to be looked up by the uv's at the intersection point
-    return vec([0,0,0])
+    bg_color = scene.bg_color
+
+    if (hit.t < np.inf):
+       output = vec([hit.uv[0], hit.uv[1], 0])
+#         output = vec([0, 0, 0])
+
+#         if (depth < MAX_DEPTH):
+#             normal = hit.normal
+#             r_dir = ray.direction
+#             normal = hit.normal
+#             m_dir = r_dir - 2 * np.dot(r_dir, normal) * normal
+#             m_ray = Ray(hit.point, m_dir, 0.0000001, np.inf)
+#             m_hit = scene.intersect(m_ray)
+#             if (m_hit != no_hit):
+#                 output = output + hit.material.k_m * \
+#                     shade(m_ray, m_hit, scene, lights, depth + 1)
+#             else:
+#                 output = output + hit.material.k_m * bg_color
+#
+#         for light in lights:
+#             output = output + light.illuminate(ray, hit, scene)
+
+       return output
+
+    else:
+        return bg_color
 
 
 def render_image(camera, scene, lights, nx, ny):
@@ -299,5 +472,15 @@ def render_image(camera, scene, lights, nx, ny):
       (ny, nx, 3) float32 -- the RGB image
     """
     # TODO A5 copy implementation from A4
-    return np.zeros((ny,nx,3), np.float32)
+    img = np.zeros((ny, nx, 3), np.float32)
+
+    for x in range(0, nx):
+        for y in range(0, ny):
+            u = (x + 0.5) / nx
+            v = (y + 0.5) / ny
+            ray = camera.generate_ray((u, v))
+            hit = scene.intersect(ray)
+            img[y][x] = shade(ray, hit, scene, lights)
+
+    return img
 
