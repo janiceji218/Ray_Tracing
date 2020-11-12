@@ -245,9 +245,13 @@ class Mesh:
         # TODO A5 (Step3 and Step4) implement this function
         # For step 4, check if uvs and normals are not None (respectively) 
         # If so, then interpolate them
-
-        return no_hit
-
+        vs = 0
+        normal = 0
+        hit = batch_intersect(vs, ray)
+        if (hit[0] == no_hit):
+            return no_hit
+        else:
+            return Hit(hit[0] - ray.origin, hit[0], normal, vec([hit[1], hit[2]), self.material)
 
 class Camera:
 
