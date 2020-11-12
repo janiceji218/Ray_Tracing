@@ -36,7 +36,6 @@ class Ray:
 
 class Material:
 
-
     def __init__(self, k_d, k_s=0., p=20., k_m=0., k_a=None):
         """Create a new material with the given parameters.
 
@@ -68,6 +67,7 @@ class Material:
 #             print(j_pixel)
             return t[j_pixel][i_pixel]
 
+
 class Hit:
 
     def __init__(self, t, point=None, normal=None, uv=None, material=None):
@@ -86,8 +86,10 @@ class Hit:
         self.uv = uv
         self.material = material
 
+
 # Value to represent absence of an intersection
 no_hit = Hit(np.inf)
+
 
 class Sphere:
 
@@ -140,12 +142,11 @@ class Sphere:
 
         P = E + t * D
         unit_normal = (P - C) / R
-        normal = normalize(P - C)
         d_hat = normalize(P - C)
         u = 0.5 + (np.arctan2(d_hat[0], d_hat[2])) / (2 * np.pi)
         v = 0.5 + (np.arcsin(d_hat[1])) / np.pi
 
-        return Hit(t, P, unit_normal, vec([u,v]), self.material)
+        return Hit(t, P, unit_normal, vec([u, v]), self.material)
 
 
 class Triangle:
@@ -214,14 +215,13 @@ class Triangle:
 
         unit_normal = normalize(np.cross(vs[0] - vs[2], vs[1] - vs[2]))
 
-        A = np.linalg.norm(np.cross(vs[1] - vs[0],vs[2] - vs[0])) / 2
-        areaA = np.linalg.norm(np.cross(vs[1] - P,vs[2] - P)) / 2
-        areaB = np.linalg.norm(np.cross(vs[0] - P,vs[2] - P)) / 2
-        areaC = np.linalg.norm(np.cross(vs[0] - P,vs[1] - P)) / 2
+        A = np.linalg.norm(np.cross(vs[1] - vs[0], vs[2] - vs[0])) / 2
+        areaA = np.linalg.norm(np.cross(vs[1] - P, vs[2] - P)) / 2
+        areaB = np.linalg.norm(np.cross(vs[0] - P, vs[2] - P)) / 2
+        areaC = np.linalg.norm(np.cross(vs[0] - P, vs[1] - P)) / 2
         u = areaB / A
         v = areaC / A
         return Hit(t, P, unit_normal, vec([u, v]), self.material)
-
 
 
 class Mesh:
@@ -229,7 +229,8 @@ class Mesh:
     def __init__(self, inds, posns, normals, uvs, material):
         self.inds = np.array(inds, np.int32)
         self.posns = np.array(posns, np.float32)
-        self.normals = np.array(normals, np.float32) if normals is not None else None
+        self.normals = np.array(
+            normals, np.float32) if normals is not None else None
         self.uvs = np.array(uvs, np.float32) if uvs is not None else None
         self.material = material
 
@@ -243,19 +244,59 @@ class Mesh:
           Hit -- the hit data
         """
         # TODO A5 (Step3 and Step4) implement this function
-        # For step 4, check if uvs and normals are not None (respectively) 
+        # For step 4, check if uvs and normals are not None (respectively)
         # If so, then interpolate them
-        vs = 0
-        normal = 0
-        hit = batch_intersect(vs, ray)
-        if (hit[0] == no_hit):
+
+        # batch_intersect returns t, beta, gamma, i
+        posns = self.posns
+        uvs = self.uvs
+        inds = self.inds
+        normals = self.normals
+        t, beta, gamma, i = batch_intersect(posns[inds[:, :]], ray)
+        vs = posns[inds[i, :]]
+        P = ray.origin + t * ray.direction
+
+        if (t == np.inf):
             return no_hit
         else:
-            return Hit(hit[0] - ray.origin, hit[0], normal, vec([hit[1], hit[2]), self.material)
+
+            alpha = 1 - beta - gamma
+
+            if uvs is not None:
+
+                uv0 = uvs[inds[i][0]]
+                uv1 = uvs[inds[i][1]]
+                uv2 = uvs[inds[i][2]]
+
+                uv = alpha * uv0 + beta * uv1 + gamma * uv2
+
+            else:
+
+                A = np.linalg.norm(np.cross(vs[1] - vs[0], vs[2] - vs[0])) / 2
+                areaA = np.linalg.norm(np.cross(vs[1] - P, vs[2] - P)) / 2
+                areaB = np.linalg.norm(np.cross(vs[0] - P, vs[2] - P)) / 2
+                areaC = np.linalg.norm(np.cross(vs[0] - P, vs[1] - P)) / 2
+                u = areaB / A
+                v = areaC / A
+                uv = vec([u, v])
+
+            if normals is not None:
+
+                n0 = normals[inds[i][0]]
+                n1 = normals[inds[i][1]]
+                n2 = normals[inds[i][2]]
+
+                unit_normal = normalize(alpha * n0 + beta * n1 + gamma * n2)
+
+            else:
+                unit_normal = normalize(np.cross(vs[0] - vs[2], vs[1] - vs[2]))
+
+            return Hit(t, P, unit_normal, uv, self.material)
+
 
 class Camera:
 
-    def __init__(self, eye=vec([0,0,0]), target=vec([0,0,-1]), up=vec([0,1,0]), 
+    def __init__(self, eye=vec([0, 0, 0]), target=vec([0, 0, -1]), up=vec([0, 1, 0]),
                  vfov=90.0, aspect=1.0):
         """Create a camera with given viewing parameters.
 
@@ -385,7 +426,7 @@ class AmbientLight:
 
 class Scene:
 
-    def __init__(self, surfs, bg_color=vec([0.2,0.3,0.5])):
+    def __init__(self, surfs, bg_color=vec([0.2, 0.3, 0.5])):
         """Create a scene containing the given objects.
 
         Parameters:
@@ -417,8 +458,8 @@ class Scene:
         return i
 
 
-
 MAX_DEPTH = 4
+
 
 def shade(ray, hit, scene, lights, depth=0):
     """Compute shading for a ray-surface intersection.
@@ -439,7 +480,7 @@ def shade(ray, hit, scene, lights, depth=0):
     bg_color = scene.bg_color
 
     if (hit.t < np.inf):
-#        output = vec([hit.uv[0], hit.uv[1], 0])
+        #        output = vec([hit.uv[0], hit.uv[1], 0])
         output = vec([0, 0, 0])
         k_m = hit.material.lookup(hit.material.k_m, hit)
         if (depth < MAX_DEPTH):
@@ -488,4 +529,3 @@ def render_image(camera, scene, lights, nx, ny):
             img[y][x] = shade(ray, hit, scene, lights)
 
     return img
-
