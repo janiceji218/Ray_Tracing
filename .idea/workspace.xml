@@ -1,7 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="BranchesTreeState">
+    <expand>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="LOCAL_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+    </expand>
+    <select />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="cc7aa39d-0f68-489d-93ef-141fc14feabb" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/creative.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/pyramid.obj" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/textures/dirt_grass.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/textures/roof_texture.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/textures/wood_texture.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ray.py" beforeDir="false" afterPath="$PROJECT_DIR$/ray.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -26,6 +50,12 @@
     <property name="nodejs_package_manager_path" value="npm" />
     <property name="vue.rearranger.settings.migration" value="true" />
   </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/textures" />
+      <recent name="$PROJECT_DIR$/models" />
+    </key>
+  </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
@@ -35,11 +65,29 @@
       <option name="presentableId" value="Default" />
       <updated>1604955189697</updated>
       <workItem from="1604955192318" duration="6835000" />
-      <workItem from="1605116698096" duration="10928000" />
+      <workItem from="1605116698096" duration="13771000" />
+      <workItem from="1605199059764" duration="10509000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="431" y="232" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1605207337541">
+      <screen x="0" y="23" width="1440" height="804" />
+    </state>
+    <state x="431" y="232" key="#com.intellij.fileTypes.FileTypeChooser/0.23.1440.804@0.23.1440.804" timestamp="1605207337541" />
   </component>
 </project>

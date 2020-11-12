@@ -253,6 +253,8 @@ class Mesh:
         inds = self.inds
         normals = self.normals
         t, beta, gamma, i = batch_intersect(posns[inds[:, :]], ray)
+        if (t == np.inf):
+            return no_hit
         vs = posns[inds[i, :]]
         P = ray.origin + t * ray.direction
 
