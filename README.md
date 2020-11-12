@@ -62,3 +62,14 @@ Finally implement interpolation of normals and texture coordinates.  This just r
 * Dice texture from Francois Faure
 * Jupiter texture from solarsystemscope.com
 * Trees are by Broken Vector from https://brokenvector.itch.io/low-poly-tree-pack
+
+## Creative portion
+
+Similar to Assignment 4, create another interesting image with your ray tracer, this time with features implemented from A5, e.g. textures on different types of primitives. You can extend your creative scene from Assignment 4, or create a new scene. Again, this is a pretty light creative portion, and will only have 10% weight in the score.
+
+
+## Handing in
+
+Hand in `ray.py` (it should be self-contained), and an image for the creative part.
+
+The functions you need to implement are marked with `A5 TODO`. As a first step, you need to copy over certain parts of your ray tracing code, and make modifications as indicated in the function comments.
