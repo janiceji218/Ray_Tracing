@@ -36,6 +36,7 @@ class Ray:
 
 class Material:
 
+
     def __init__(self, k_d, k_s=0., p=20., k_m=0., k_a=None):
         """Create a new material with the given parameters.
 
@@ -49,13 +50,23 @@ class Material:
         # TODO A5 (Step2) implement this function
         # Check if each property is an array of shape (h, w, 3)
         # If so, then apply the property using the uv coordinates supplied by the geometry.
-
         self.k_d = k_d
         self.k_s = k_s
         self.p = p
         self.k_m = k_m
         self.k_a = k_a if k_a is not None else k_d
 
+    def lookup(self, t, hit):
+        if (isinstance(t, float) or t.shape == (3,)):
+            return t
+        else:
+            i = int(np.floor(hit.uv[0] * t.shape[1]))
+            j = int(np.floor(hit.uv[1] * t.shape[0]))
+            i_pixel = np.maximum(0, np.minimum(t.shape[1] - 1, i))
+            j_pixel = np.maximum(0, np.minimum(t.shape[0] - 1, j))
+#             print(i_pixel)
+#             print(j_pixel)
+            return t[j_pixel][i_pixel]
 
 class Hit:
 
@@ -77,7 +88,6 @@ class Hit:
 
 # Value to represent absence of an intersection
 no_hit = Hit(np.inf)
-
 
 class Sphere:
 
@@ -131,8 +141,10 @@ class Sphere:
         P = E + t * D
         unit_normal = (P - C) / R
         normal = normalize(P - C)
-        u = np.arctan2(normal[0], normal[2]) / (2 * np.pi) + 0.5
-        v = normal[1] * 0.5 + 0.5
+        d_hat = normalize(P - C)
+        u = 0.5 + (np.arctan2(d_hat[0], d_hat[2])) / (2 * np.pi)
+        v = 0.5 + (np.arcsin(d_hat[1])) / np.pi
+
         return Hit(t, P, unit_normal, vec([u,v]), self.material)
 
 
@@ -202,24 +214,12 @@ class Triangle:
 
         unit_normal = normalize(np.cross(vs[0] - vs[2], vs[1] - vs[2]))
 
-        dA = np.linalg.norm(vs[0] - P)
-        dB = np.linalg.norm(vs[1] - P)
-        dC = np.linalg.norm(vs[2] - vs[1])
-        sum = dA + dB + dC
-        coefA = dA / sum
-        coefB = dB / sum
-        coefC = dC / sum
-        pA = vs[0]
-        pB = vs[1]
-        pC = vs[2]
-        #(𝐵𝑦−𝐶𝑦)(𝑃𝑥−𝐶𝑥)+(𝐶𝑥−𝐵𝑥)(𝑃𝑦−𝐶𝑦) / (𝐵𝑦−𝐶𝑦)(𝐴𝑥−𝐶𝑥)+(𝐶𝑥−𝐵𝑥)(𝐴𝑦−𝐶𝑦)
-        #baryA = ((pB[1] - pC[1])*(P[0] - pC[0]) + (pC[0] - pB[0])*(P[1] - pC[1])) / ((pB[1] - pC[1])*(pA[0] - pC[0])+(pC[0] - pB[0])*(pA[1] - pC[1]))
-        #
-        #baryB =
-
-        u = coefA * (vs[0][0] / vs[0][2]) + coefB * (vs[1][0] / vs[1][2]) + coefC * (vs[2][0] / vs[2][2])
-        v = coefA * (vs[0][1] / vs[0][2]) + coefB * (vs[1][1] / vs[1][2]) + coefC * (vs[2][1] / vs[2][2])
-
+        A = np.linalg.norm(np.cross(vs[1] - vs[0],vs[2] - vs[0])) / 2
+        areaA = np.linalg.norm(np.cross(vs[1] - P,vs[2] - P)) / 2
+        areaB = np.linalg.norm(np.cross(vs[0] - P,vs[2] - P)) / 2
+        areaC = np.linalg.norm(np.cross(vs[0] - P,vs[1] - P)) / 2
+        u = areaB / A
+        v = areaC / A
         return Hit(t, P, unit_normal, vec([u, v]), self.material)
 
 
@@ -332,11 +332,11 @@ class PointLight:
             position = self.position
             normal = hit.normal
             dist_to_source = np.linalg.norm(hit.point - position)
-            diffuse_coeff = hit.material.k_d
+            diffuse_coeff = hit.material.lookup(hit.material.k_d, hit)
             v = (-1) * normalize(ray.direction)
             light_ray = normalize(position - hit.point)
-            specular_coeff = hit.material.k_s
-            p = hit.material.p
+            specular_coeff = hit.material.lookup(hit.material.k_s, hit)
+            p = hit.material.lookup(hit.material.p, hit)
 
             # diffuse shading
             # diffuse_output = diffuse_coeff * (np.maximum(0, np.dot(normal, light_ray)) / (dist_to_source ** 2)) * intensity
@@ -374,7 +374,7 @@ class AmbientLight:
         # TODO A5 copy implementation from A4 and modify
         # k_a needs to be looked up by the uv's at the intersection point
         intensity = self.intensity
-        diffuse_coeff = hit.material.k_a
+        diffuse_coeff = hit.material.lookup(hit.material.k_a, hit)
         output = diffuse_coeff * intensity
         return output
 
@@ -435,26 +435,27 @@ def shade(ray, hit, scene, lights, depth=0):
     bg_color = scene.bg_color
 
     if (hit.t < np.inf):
-       output = vec([hit.uv[0], hit.uv[1], 0])
-#         output = vec([0, 0, 0])
+#        output = vec([hit.uv[0], hit.uv[1], 0])
+        output = vec([0, 0, 0])
+        k_m = hit.material.lookup(hit.material.k_m, hit)
+        if (depth < MAX_DEPTH):
+            normal = hit.normal
+            r_dir = ray.direction
+            normal = hit.normal
+            m_dir = r_dir - 2 * np.dot(r_dir, normal) * normal
+            m_ray = Ray(hit.point, m_dir, 0.0000001, np.inf)
+            m_hit = scene.intersect(m_ray)
 
-#         if (depth < MAX_DEPTH):
-#             normal = hit.normal
-#             r_dir = ray.direction
-#             normal = hit.normal
-#             m_dir = r_dir - 2 * np.dot(r_dir, normal) * normal
-#             m_ray = Ray(hit.point, m_dir, 0.0000001, np.inf)
-#             m_hit = scene.intersect(m_ray)
-#             if (m_hit != no_hit):
-#                 output = output + hit.material.k_m * \
-#                     shade(m_ray, m_hit, scene, lights, depth + 1)
-#             else:
-#                 output = output + hit.material.k_m * bg_color
-#
-#         for light in lights:
-#             output = output + light.illuminate(ray, hit, scene)
+            if (m_hit != no_hit):
+                output = output + k_m * \
+                    shade(m_ray, m_hit, scene, lights, depth + 1)
+            else:
+                output = output + k_m * bg_color
 
-       return output
+        for light in lights:
+            output = output + light.illuminate(ray, hit, scene)
+
+        return output
 
     else:
         return bg_color
